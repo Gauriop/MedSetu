@@ -5,8 +5,8 @@ __pycache__/
 .ipynb_checkpoints/
 data/raw/*.csv
 data/processed/*.csv
-models/*.safetensors
-models/*.bin
+data/processed/*.jsonl
+models/*/
 *.env
 .DS_Store
 "@ | Out-File -Encoding utf8 .gitignore
