@@ -25,7 +25,7 @@ def get_client() -> Groq:
     return Groq(api_key=api_key)
 
 
-def summarize_report(report_text: str, model: str = "llama-3.1-8b-instant") -> str:
+def summarize_report(report_text: str, model: str = "openai/gpt-oss-20b") -> str:
     client = get_client()
     response = client.chat.completions.create(
         model=model,

@@ -9,6 +9,9 @@ import sys
 from pathlib import Path
 from fastapi import APIRouter
 from pydantic import BaseModel
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 sys.path.append(str(Path(__file__).resolve().parent.parent / "src"))
 from summarize import get_client  # reuse the same Groq client setup  # noqa: E402
@@ -32,7 +35,7 @@ class AskRequest(BaseModel):
 def ask_endpoint(req: AskRequest):
     client = get_client()
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
+        model="openai/gpt-oss-20b",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": f"Report:\n{req.report_text}\n\nQuestion: {req.question}"},
