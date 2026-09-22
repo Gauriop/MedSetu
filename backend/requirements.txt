@@ -1,0 +1,47 @@
+# ============================================================
+# MedSetu backend - dependencies
+# Laptop-installable (CPU only). GPU-only packages are listed
+# at the bottom - install those separately on Colab/college PC.
+# ============================================================
+
+# API layer
+fastapi
+uvicorn[standard]
+python-multipart
+
+# Data handling
+pandas
+numpy
+scikit-learn
+
+# PDF/OCR ingestion
+pdfplumber
+pytesseract
+pdf2image
+pillow
+
+# Zero-shot summarization via hosted API
+groq
+
+# Translation
+torch
+transformers
+sentencepiece
+deep-translator
+
+# TTS
+gTTS
+
+# Evaluation
+rouge-score
+bert-score
+sacrebleu
+
+# Notebooks
+jupyter
+ipykernel
+
+# ============================================================
+# GPU ONLY (Colab / college PC) - install separately there:
+# pip install bitsandbytes accelerate peft trl datasets
+# ============================================================

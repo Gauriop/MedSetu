@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Upload a report — MedSetu</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="page" style="background: var(--bg-light);">
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html" class="nav-logo"><span class="mark">MS</span> MedSetu</a>
+      <div class="nav-links">
+        <a href="upload.html">Upload a report</a>
+        <a href="index.html#how">How it works</a>
+      </div>
+    </nav>
+
+    <div class="page-header">
+      <h1 class="page-title">Add your medical report</h1>
+      <p class="page-sub">Upload a PDF, or paste the report text directly. Nothing is stored beyond this session.</p>
+    </div>
+
+    <div class="upload-panel">
+      <div>
+        <div class="dropzone" id="dropzone">
+          <div class="dropzone-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 16V4M12 4L7 9M12 4l5 5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+          <div class="dropzone-title">Drop your PDF here, or click to browse</div>
+          <div class="dropzone-hint">Digital or scanned reports both work</div>
+          <input type="file" id="fileInput" accept=".pdf">
+        </div>
+
+        <div class="divider-or">or paste the report text</div>
+
+        <div class="paste-box">
+          <textarea id="reportText" placeholder="Paste the report text here..."></textarea>
+        </div>
+
+        <div style="margin-top:20px; display:flex; justify-content:flex-end;">
+          <a href="report.html" class="btn btn-dark">Summarize this report →</a>
+        </div>
+      </div>
+
+      <div>
+        <div class="side-card">
+          <h3>Try a sample report</h3>
+          <p>No report handy? See MedSetu in action with a sample surgical report.</p>
+          <a href="report.html?sample=1" class="sample-link">Use sample report →</a>
+        </div>
+
+        <div class="side-card">
+          <div class="lang-note">
+            <span class="chip">मराठी</span>
+            <span>Output is currently generated in Marathi. More regional languages are planned.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/main.js"></script>
+</body>
+</html>

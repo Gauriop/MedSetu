@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your report, explained — MedSetu</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="page" style="background: var(--bg-light);">
+  <div class="container">
+    <nav class="nav">
+      <a href="index.html" class="nav-logo"><span class="mark">MS</span> MedSetu</a>
+      <div class="nav-links">
+        <a href="upload.html">New report</a>
+      </div>
+    </nav>
+
+    <div class="report-toolbar">
+      <a href="upload.html" class="back-link">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Back
+      </a>
+      <div style="font-size:13px; color:var(--ink-faint);">Laparoscopic Appendectomy — Surgical Report</div>
+    </div>
+
+    <div class="bridge-panel">
+      <div class="lang-column">
+        <div class="lang-header">
+          <span class="lang-label">ENGLISH SUMMARY</span>
+          <button class="icon-btn" id="playEn" title="Read aloud">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M15.5 8.5a5 5 0 010 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="lang-text" id="englishSummary">
+          You had surgery to remove your appendix, which was inflamed and had a small perforation (a tiny tear). The appendix measured 1.2 cm. The surgery was done using a minimally invasive (laparoscopic) technique. There was no sign of an abscess. You tolerated the procedure well and were moved to recovery in stable condition.
+        </div>
+        <div class="tag-row">
+          <span class="tag tag-ok">📏 1.2 cm</span>
+          <span class="tag tag-ok">⚠ Perforation: present</span>
+          <span class="tag tag-ok">✕ No abscess</span>
+        </div>
+      </div>
+
+      <div class="bridge-divider">
+        <div class="bridge-node">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M7 7l10 10M7 17L17 7" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+
+      <div class="lang-column marathi">
+        <div class="lang-header">
+          <span class="lang-label">मराठी सारांश</span>
+          <button class="icon-btn" id="playMr" title="मोठ्याने वाचा">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M15.5 8.5a5 5 0 010 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="lang-text mr" id="marathiSummary">
+          तुमच्या अपेंडिक्सवर शस्त्रक्रिया करण्यात आली, कारण त्यात सूज आणि एक लहान छिद्र (फाटलेला भाग) होता. अपेंडिक्सचा आकार १.२ सेंटीमीटर होता. ही शस्त्रक्रिया लॅपरोस्कोपिक (कमी चिरा असलेल्या) पद्धतीने करण्यात आली. गळू (abscess) आढळला नाही. शस्त्रक्रियेनंतर तुमची स्थिती स्थिर होती.
+        </div>
+        <div class="tag-row">
+          <span class="tag tag-ok">📏 १.२ सेंमी</span>
+          <span class="tag tag-ok">⚠ छिद्र: आढळले</span>
+          <span class="tag tag-ok">✕ गळू नाही</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="preservation-note">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="flex-shrink:0; margin-top:2px;"><path d="M9 12l2 2 4-4" stroke="#1f5c40" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="#1f5c40" stroke-width="2"/></svg>
+      <div>
+        <strong>All key details preserved.</strong> Measurements, findings, and the negative finding (no abscess) match between the summary and the Marathi translation.
+      </div>
+    </div>
+
+    <div class="ask-bar">
+      <input type="text" placeholder="या अहवालाबद्दल प्रश्न विचारा... (Ask a question about this report)">
+      <button class="mic-btn" title="Ask by voice">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" stroke="white" stroke-width="2"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="disclaimer-strip">
+      This summary is for understanding purposes only and is not a medical diagnosis. Always confirm details with your doctor.
+    </div>
+  </div>
+</div>
+
+<script src="js/main.js"></script>
+</body>
+</html>
