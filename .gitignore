@@ -10,3 +10,4 @@ backend/reports/audio_outputs/*.mp3
 *.env
 .DS_Store
 backend/requirements.txt
+backend/.env

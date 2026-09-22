@@ -1,15 +1,10 @@
-"""
-summarize.py
-Zero-shot summarization via Groq-hosted Llama (no local GPU needed).
-
-Requirements:
-    pip install groq
-Set your API key:
-    setx GROQ_API_KEY "your-key-here"   (Windows, restart terminal after)
-"""
-
 import os
+from pathlib import Path
+from dotenv import load_dotenv
 from groq import Groq
+
+# Load .env from the backend/ root regardless of where this script is run from
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 SYSTEM_PROMPT = (
     "You are a medical assistant that explains clinical reports to patients "
