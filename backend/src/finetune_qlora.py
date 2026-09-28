@@ -6,7 +6,7 @@ from transformers import (AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfi
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-BASE_MODEL = "meta-llama/Llama-3.1-8B-Instruct"
+BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 TRAIN_FILE = BASE_DIR / "data/processed/finetune_train.jsonl"
 VAL_FILE = BASE_DIR / "data/processed/finetune_val.jsonl"
 OUTPUT_DIR = BASE_DIR / "models/mtsamples-summarizer-lora"
