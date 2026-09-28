@@ -1,117 +1,184 @@
-// --- Upload page: dropzone interactions ---
+const API_BASE = 'http://localhost:8000/api';
 
-const dropzone = document.getElementById('dropzone');
-const fileInput = document.getElementById('fileInput');
+const SAMPLE_REPORT = `PREOPERATIVE DIAGNOSIS: Acute appendicitis.
+POSTOPERATIVE DIAGNOSIS: Acute appendicitis with perforation.
+PROCEDURE: Laparoscopic appendectomy.
+The patient is a 34-year-old male who presented with right lower quadrant pain for two days. CT scan showed an inflamed appendix measuring 1.2 cm with evidence of perforation. No signs of abscess formation. The patient tolerated the procedure well and was transferred to recovery in stable condition.`;
 
-if (dropzone && fileInput) {
+const $ = (id) => document.getElementById(id);
+
+async function postJSON(path, body) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`${path} failed (${res.status})`);
+  return res.json();
+}
+
+/* ---------------- Upload page ---------------- */
+
+const dropzone = $('dropzone');
+if (dropzone) {
+  const fileInput = $('fileInput');
+  const submitBtn = $('submitBtn');
+  const uploadError = $('uploadError');
+
   dropzone.addEventListener('click', () => fileInput.click());
-
-  dropzone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropzone.classList.add('drag-over');
-  });
-
-  dropzone.addEventListener('dragleave', () => {
-    dropzone.classList.remove('drag-over');
-  });
-
+  dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
   dropzone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropzone.classList.remove('drag-over');
-    if (e.dataTransfer.files.length) {
-      fileInput.files = e.dataTransfer.files;
-      updateDropzoneLabel(e.dataTransfer.files[0].name);
-    }
+    if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; showFile(); }
   });
+  fileInput.addEventListener('change', showFile);
+  function showFile() {
+    if (fileInput.files.length) dropzone.querySelector('.dropzone-title').textContent = `Selected: ${fileInput.files[0].name}`;
+  }
 
-  fileInput.addEventListener('change', () => {
-    if (fileInput.files.length) {
-      updateDropzoneLabel(fileInput.files[0].name);
-    }
-  });
-}
+  submitBtn.addEventListener('click', async () => {
+    const text = $('reportText').value.trim();
+    const file = fileInput.files[0];
+    if (!file && !text) { uploadError.textContent = 'Please upload a PDF or paste the report text.'; uploadError.style.display = 'block'; return; }
 
-function updateDropzoneLabel(filename) {
-  const title = dropzone.querySelector('.dropzone-title');
-  title.textContent = `Selected: ${filename}`;
-}
-
-// --- Backend API base URL ---
-// When running the backend locally: uvicorn app:app --reload --port 8000
-const API_BASE = 'http://localhost:8000/api';
-
-// --- Report page: play buttons ---
-
-const playEn = document.getElementById('playEn');
-const playMr = document.getElementById('playMr');
-
-if (playEn) {
-  playEn.addEventListener('click', () => {
-    // English playback uses the browser's built-in speech synthesis (no
-    // backend TTS needed for English - gTTS is specifically for Marathi).
-    speakBrowser(document.getElementById('englishSummary').textContent, 'en-US');
-  });
-}
-
-if (playMr) {
-  playMr.addEventListener('click', async () => {
-    const marathiText = document.getElementById('marathiSummary').textContent;
+    uploadError.style.display = 'none';
+    submitBtn.textContent = 'Reading report…';
+    submitBtn.disabled = true;
     try {
-      await playMarathiAudio(marathiText);
+      const form = new FormData();
+      if (file) form.append('file', file); else form.append('text', text);
+      const res = await fetch(`${API_BASE}/ingest`, { method: 'POST', body: form });
+      if (!res.ok) throw new Error('ingest failed');
+      const data = await res.json();
+      if (!data.text || data.text.length < 20) throw new Error('No readable text found in that file.');
+      sessionStorage.setItem('reportText', data.text);
+      window.location.href = 'report.html';
     } catch (err) {
-      console.warn('Backend TTS unavailable, falling back to browser speech synthesis:', err);
-      speakBrowser(marathiText, 'mr-IN');
+      uploadError.textContent = `Could not read the report: ${err.message}. Is the backend running on localhost:8000?`;
+      uploadError.style.display = 'block';
+      submitBtn.textContent = 'Summarize this report →';
+      submitBtn.disabled = false;
     }
   });
 }
 
-function speakBrowser(text, lang) {
-  if ('speechSynthesis' in window) {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = lang;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
+/* ---------------- Report page ---------------- */
+
+const DEVANAGARI_DIGITS = '०१२३४५६७८९';
+const toAscii = (s) => s.replace(/[०-९]/g, (d) => DEVANAGARI_DIGITS.indexOf(d));
+const MR_SIDE = { left: /डाव्या|डावा|डावी|डावे/, right: /उजव्या|उजवा|उजवी|उजवे/, bilateral: /दोन्ही/ };
+
+function cleanSummary(text) {
+  return text.replace(/[*#`_>]/g, '').replace(/^\s*[-•]\s+/gm, '').replace(/\s+\n/g, '\n').trim();
+}
+function splitSentences(text) {
+  return (text.replace(/\n+/g, ' ').match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text]).map((s) => s.trim()).filter(Boolean);
+}
+const numbersIn = (s) => (toAscii(s).match(/\d+(?:\.\d+)?/g) || []);
+
+function setStatus(msg) { $('statusText').textContent = msg; }
+function showError(msg) { const b = $('errorBox'); b.textContent = msg; b.style.display = 'block'; setStatus('Something went wrong'); }
+
+function renderTags(ex) {
+  const tags = [];
+  ex.measurements.forEach(([v, u]) => tags.push(`📏 ${v} ${u}`));
+  ex.laterality.forEach((s) => tags.push(`↔ ${s}`));
+  ex.severity.forEach((s) => tags.push(`⚠ ${s}`));
+  [...new Set(ex.negations.map((n) => n.cue))].forEach((c) => tags.push(`✕ "${c}"`));
+  $('englishTags').innerHTML = tags.map((t) => `<span class="tag tag-ok"></span>`).join('');
+  [...$('englishTags').children].forEach((el, i) => { el.textContent = tags[i]; });
+}
+
+function runCheck(original, english, marathi) {
+  const issues = [];
+  const marNums = numbersIn(marathi);
+  numbersIn(english).forEach((n) => { if (!marNums.includes(n)) issues.push(`the number ${n} is missing from the Marathi text`); });
+  Object.entries(MR_SIDE).forEach(([side, re]) => {
+    if (new RegExp(`\\b${side}\\b`, 'i').test(english) && !re.test(marathi)) issues.push(`"${side}" may not be carried into Marathi`);
+  });
+  const box = $('checkBox');
+  box.style.display = 'flex';
+  if (issues.length) {
+    box.classList.add('warn');
+    box.innerHTML = `<div><strong>Please double-check with your doctor.</strong> Automated check: ${issues.join('; ')}.</div>`;
   } else {
-    alert('Speech playback not supported in this browser.');
+    box.classList.remove('warn');
+    box.innerHTML = '<div><strong>Automated check passed.</strong> Numbers and left/right terms from the English summary appear in the Marathi text. This is a basic check, not a guarantee.</div>';
   }
 }
 
-async function playMarathiAudio(text) {
-  const res = await fetch(`${API_BASE}/tts`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text }),
-  });
-  if (!res.ok) throw new Error('TTS request failed');
+async function loadReport() {
+  const params = new URLSearchParams(window.location.search);
+  const original = params.get('sample') ? SAMPLE_REPORT : sessionStorage.getItem('reportText');
+  if (!original) { window.location.href = 'upload.html'; return; }
+  sessionStorage.setItem('reportText', original);
 
-  const audioBlob = await res.blob();
-  const audioUrl = URL.createObjectURL(audioBlob);
-  const audio = new Audio(audioUrl);
-  audio.play();
+  try {
+    setStatus('Summarizing…');
+    const s = await postJSON('/summarize', { report_text: original, use_finetuned: false });
+    const english = cleanSummary(s.summary);
+    $('englishSummary').textContent = english;
+
+    setStatus('Finding key details…');
+    renderTags(await postJSON('/extract', { text: english }));
+
+    setStatus('Translating to Marathi (this can take a little while)…');
+    $('marathiSummary').innerHTML = '<span class="spinner"></span> Translating…';
+    const parts = [];
+    for (const sentence of splitSentences(english)) {
+      parts.push((await postJSON('/translate', { text: sentence })).translation);
+      $('marathiSummary').textContent = parts.join(' ');
+    }
+    const marathi = parts.join(' ');
+
+    runCheck(original, english, marathi);
+    setStatus('Done');
+  } catch (err) {
+    showError(`${err.message}. Check that the backend is running on localhost:8000 and try again.`);
+  }
 }
 
-// --- Ask-a-question bar (report.html) ---
+if ($('englishSummary')) {
+  loadReport();
 
-const askInput = document.querySelector('.ask-bar input');
+  $('playEn').addEventListener('click', () => {
+    if (!('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance($('englishSummary').textContent);
+    u.lang = 'en-US';
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  });
 
-if (askInput) {
-  askInput.addEventListener('keydown', async (e) => {
-    if (e.key === 'Enter' && askInput.value.trim()) {
-      const question = askInput.value.trim();
-      const reportText = document.getElementById('englishSummary').textContent;
+  $('playMr').addEventListener('click', async () => {
+    const text = $('marathiSummary').textContent.trim();
+    if (!text) return;
+    try {
+      const res = await fetch(`${API_BASE}/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      if (!res.ok) throw new Error('tts failed');
+      new Audio(URL.createObjectURL(await res.blob())).play();
+    } catch (err) {
+      showError('Could not generate Marathi audio. Is the backend running?');
+    }
+  });
 
-      try {
-        const res = await fetch(`${API_BASE}/ask`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ report_text: reportText, question }),
-        });
-        const data = await res.json();
-        alert(data.answer); // placeholder display - replace with a proper chat UI element later
-      } catch (err) {
-        alert('Could not reach the backend. Is it running on localhost:8000?');
-      }
-      askInput.value = '';
+  $('askInput').addEventListener('keydown', async (e) => {
+    const q = e.target.value.trim();
+    if (e.key !== 'Enter' || !q) return;
+    const box = $('answerBox');
+    box.style.display = 'block';
+    box.innerHTML = '<span class="spinner"></span> Looking in your report…';
+    const question = /[\u0900-\u097F]/.test(q) ? `${q}\n\n(Please answer in Marathi.)` : q;
+    try {
+      const data = await postJSON('/ask', { report_text: sessionStorage.getItem('reportText'), question });
+      box.textContent = data.answer;
+    } catch (err) {
+      box.textContent = 'Could not get an answer. Is the backend running?';
     }
   });
 }
