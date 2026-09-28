@@ -1,98 +1,85 @@
-"""
-finetune_qlora.py
-
-*** RUN THIS ON A GPU MACHINE ONLY (Colab / college PC) ***
-
-Fine-tunes Llama 3.1 8B Instruct on MTSamples using QLoRA.
-"""
-
-import torch
-from datasets import load_dataset
-from transformers import (
-    AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, TrainingArguments,
-)
+import json, random, torch
+from pathlib import Path
+from datasets import Dataset
+from transformers import (AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig,
+                          TrainingArguments, Trainer, DataCollatorForSeq2Seq)
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
-from trl import SFTTrainer
 
+BASE_DIR = Path(__file__).resolve().parent.parent
 BASE_MODEL = "meta-llama/Llama-3.1-8B-Instruct"
-# BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"   # fallback if Llama access/GPU is an issue
+TRAIN_FILE = BASE_DIR / "data/processed/finetune_train.jsonl"
+VAL_FILE = BASE_DIR / "data/processed/finetune_val.jsonl"
+OUTPUT_DIR = BASE_DIR / "models/mtsamples-summarizer-lora"
 
-TRAIN_FILE = "data/processed/finetune_train.jsonl"
-VAL_FILE = "data/processed/finetune_val.jsonl"
-OUTPUT_DIR = "models/mtsamples-summarizer-lora"
-
-MAX_SEQ_LENGTH = 2048
-NUM_EPOCHS = 2
-LEARNING_RATE = 2e-4
-LORA_RANK = 16
-LORA_ALPHA = 32
+MAX_LEN = 1536
+MAX_TRAIN = 1500
+NUM_EPOCHS = 1
 SYSTEM_PROMPT = "You are a medical assistant that summarizes clinical reports for patients."
 
-
-def format_example(example):
-    return {
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"{example['instruction']}\n\nReport:\n{example['input']}"},
-            {"role": "assistant", "content": example["output"]},
-        ]
-    }
-
+def load_jsonl(p):
+    return [json.loads(l) for l in open(p, encoding="utf-8")]
 
 def main():
-    print(f"Fine-tuning base model: {BASE_MODEL}")
-    dataset = load_dataset("json", data_files={"train": TRAIN_FILE, "validation": VAL_FILE})
+    tok = AutoTokenizer.from_pretrained(BASE_MODEL)
+    if tok.pad_token is None:
+        tok.pad_token = tok.eos_token
 
-    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
+    def encode(ex):
+        msgs = [{"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": f"{ex['instruction']}\n\nReport:\n{ex['input']}"}]
+        prompt = tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
+        p_ids = tok(prompt, add_special_tokens=False)["input_ids"]
+        a_ids = tok(ex["output"] + tok.eos_token, add_special_tokens=False)["input_ids"]
+        ids = p_ids + a_ids
+        labels = [-100] * len(p_ids) + a_ids
+        return {"input_ids": ids, "attention_mask": [1] * len(ids), "labels": labels}
 
-    def apply_template(example):
-        formatted = format_example(example)
-        text = tokenizer.apply_chat_template(formatted["messages"], tokenize=False)
-        return {"text": text}
+    def build(rows, limit=None):
+        random.Random(42).shuffle(rows)
+        out = []
+        for r in rows:
+            e = encode(r)
+            if len(e["input_ids"]) <= MAX_LEN:
+                out.append(e)
+            if limit and len(out) >= limit:
+                break
+        return Dataset.from_list(out)
 
-    dataset = dataset.map(apply_template)
+    train_ds = build(load_jsonl(TRAIN_FILE), MAX_TRAIN)
+    val_ds = build(load_jsonl(VAL_FILE), 100)
+    print(f"Train examples: {len(train_ds)} | Val examples: {len(val_ds)}")
 
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True, bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.bfloat16, bnb_4bit_use_double_quant=True,
-    )
+    use_bf16 = torch.cuda.is_bf16_supported()
+    dtype = torch.bfloat16 if use_bf16 else torch.float16
 
-    model = AutoModelForCausalLM.from_pretrained(BASE_MODEL, quantization_config=bnb_config, device_map="auto")
-    model = prepare_model_for_kbit_training(model)
+    bnb = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
+                             bnb_4bit_compute_dtype=dtype, bnb_4bit_use_double_quant=True)
+    model = AutoModelForCausalLM.from_pretrained(BASE_MODEL, quantization_config=bnb, device_map="auto")
+    model.config.use_cache = False
+    model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
 
-    lora_config = LoraConfig(
-        r=LORA_RANK, lora_alpha=LORA_ALPHA,
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
-        lora_dropout=0.05, bias="none", task_type="CAUSAL_LM",
-    )
-    model = get_peft_model(model, lora_config)
+    lora = LoraConfig(r=16, lora_alpha=32, lora_dropout=0.05, bias="none", task_type="CAUSAL_LM",
+                      target_modules=["q_proj", "k_proj", "v_proj", "o_proj"])
+    model = get_peft_model(model, lora)
     model.print_trainable_parameters()
 
-    training_args = TrainingArguments(
-        output_dir=OUTPUT_DIR, num_train_epochs=NUM_EPOCHS,
-        per_device_train_batch_size=2, gradient_accumulation_steps=4,
-        learning_rate=LEARNING_RATE, logging_steps=10,
-        save_strategy="epoch", eval_strategy="epoch", bf16=True, report_to="none",
-    )
+    args = TrainingArguments(
+        output_dir=str(OUTPUT_DIR), num_train_epochs=NUM_EPOCHS,
+        per_device_train_batch_size=1, gradient_accumulation_steps=8,
+        learning_rate=2e-4, lr_scheduler_type="cosine", warmup_ratio=0.03,
+        logging_steps=10, eval_strategy="no", save_strategy="no",
+        bf16=use_bf16, fp16=not use_bf16, optim="paged_adamw_8bit",
+        gradient_checkpointing=True, report_to="none")
 
-    trainer = SFTTrainer(
-        model=model, args=training_args,
-        train_dataset=dataset["train"], eval_dataset=dataset["validation"],
-        dataset_text_field="text", max_seq_length=MAX_SEQ_LENGTH,
-    )
-
-    print("Starting fine-tuning...")
+    trainer = Trainer(model=model, args=args, train_dataset=train_ds,
+                      data_collator=DataCollatorForSeq2Seq(tok, padding=True, label_pad_token_id=-100))
     trainer.train()
 
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     model.save_pretrained(OUTPUT_DIR)
-    tokenizer.save_pretrained(OUTPUT_DIR)
-    with open(f"{OUTPUT_DIR}/base_model.txt", "w") as f:
-        f.write(BASE_MODEL)
-
-    print("Done. Copy the models/mtsamples-summarizer-lora folder back to your repo.")
-
+    tok.save_pretrained(OUTPUT_DIR)
+    (OUTPUT_DIR / "base_model.txt").write_text(BASE_MODEL)
+    print("Adapter saved to", OUTPUT_DIR)
 
 if __name__ == "__main__":
     main()
