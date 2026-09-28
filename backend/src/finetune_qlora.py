@@ -66,7 +66,7 @@ def main():
     args = TrainingArguments(
         output_dir=str(OUTPUT_DIR), num_train_epochs=NUM_EPOCHS,
         per_device_train_batch_size=1, gradient_accumulation_steps=8,
-        learning_rate=2e-4, lr_scheduler_type="cosine", warmup_ratio=0.03,
+        learning_rate=2e-4, lr_scheduler_type="cosine", warmup_steps=5,
         logging_steps=10, eval_strategy="no", save_strategy="no",
         bf16=use_bf16, fp16=not use_bf16, optim="paged_adamw_8bit",
         gradient_checkpointing=True, report_to="none")
