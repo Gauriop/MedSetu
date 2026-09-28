@@ -3,16 +3,17 @@ translate.py
 Translates English text into Marathi using AI4Bharat's IndicTrans2
 (distilled 200M variant - runs on CPU, slow but workable).
 
+torch/transformers are imported lazily (inside the functions) so the API
+still starts even if torch can't load on this machine. In that case the
+/api/translate route falls back to Google Translate.
+
 Requirements:
     pip install torch transformers sentencepiece
     (IndicTrans2 model download happens automatically on first call)
 
-Fallback (if IndicTrans2 setup gives trouble):
+Fallback:
     pip install deep-translator
 """
-
-import torch
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
 MODEL_NAME = "ai4bharat/indictrans2-en-indic-dist-200M"
 
@@ -23,6 +24,8 @@ _tokenizer = None
 def _load_model():
     global _model, _tokenizer
     if _model is None:
+        from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+
         print("[translate] Loading IndicTrans2 model (first call only)...")
         _tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
         _model = AutoModelForSeq2SeqLM.from_pretrained(MODEL_NAME, trust_remote_code=True)
@@ -31,6 +34,8 @@ def _load_model():
 
 
 def translate_to_marathi(text: str) -> str:
+    import torch
+
     model, tokenizer = _load_model()
     input_text = f"eng_Latn mar_Deva {text}"
     inputs = tokenizer(input_text, return_tensors="pt", truncation=True, max_length=512)
