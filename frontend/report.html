@@ -1,59 +1,83 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Your report, explained — MedSetu</title>
-<link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-<div class="page" style="background: var(--bg-light);">
-  <div class="container">
-    <nav class="nav">
-      <a href="index.html" class="nav-logo"><span class="mark">MS</span> MedSetu</a>
-      <div class="nav-links"><a href="upload.html">New report</a></div>
-    </nav>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Your report, explained — MedSetu</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="page" style="background: var(--bg-light)">
+      <div class="container">
+        <nav class="nav">
+          <a href="index.html" class="nav-logo"
+            ><span class="mark">MS</span> MedSetu</a
+          >
+          <div class="nav-links"><a href="upload.html">New report</a></div>
+        </nav>
 
-    <div class="report-toolbar">
-      <a href="upload.html" class="back-link">← Back</a>
-      <div id="statusText" style="font-size:13px; color:var(--ink-faint);">Starting…</div>
-    </div>
-
-    <div id="errorBox" class="error-box" style="display:none;"></div>
-
-    <div class="bridge-panel">
-      <div class="lang-column">
-        <div class="lang-header">
-          <span class="lang-label">ENGLISH SUMMARY</span>
-          <button class="icon-btn" id="playEn" title="Read aloud">🔊</button>
+        <div class="report-toolbar">
+          <a href="upload.html" class="back-link">← Back</a>
+          <div id="statusText" style="font-size: 13px; color: var(--ink-faint)">
+            Starting…
+          </div>
         </div>
-        <div class="lang-text" id="englishSummary"><span class="spinner"></span> Working on it…</div>
-        <div class="tag-row" id="englishTags"></div>
-      </div>
 
-      <div class="bridge-divider"><div class="bridge-node">⇄</div></div>
+        <div id="errorBox" class="error-box" style="display: none"></div>
 
-      <div class="lang-column marathi">
-        <div class="lang-header">
-          <span class="lang-label">मराठी सारांश</span>
-          <button class="icon-btn" id="playMr" title="मोठ्याने वाचा">🔊</button>
+        <div class="bridge-panel">
+          <div class="lang-column">
+            <div class="lang-header">
+              <span class="lang-label">ENGLISH SUMMARY</span>
+              <button class="icon-btn" id="playEn" title="Read aloud">
+                🔊
+              </button>
+            </div>
+            <div class="lang-text" id="englishSummary">
+              <span class="spinner"></span> Working on it…
+            </div>
+            <div class="tag-row" id="englishTags"></div>
+          </div>
+
+          <div class="bridge-divider"><div class="bridge-node">⇄</div></div>
+
+          <div class="lang-column marathi">
+            <div class="lang-header">
+              <span class="lang-label">मराठी सारांश</span>
+              <button class="icon-btn" id="playMr" title="मोठ्याने वाचा">
+                🔊
+              </button>
+            </div>
+            <div class="lang-text mr" id="marathiSummary"></div>
+          </div>
         </div>
-        <div class="lang-text mr" id="marathiSummary"></div>
+
+        <div
+          class="preservation-note"
+          id="checkBox"
+          style="display: none"
+        ></div>
+
+        <div class="ask-bar">
+          <input
+            type="text"
+            id="askInput"
+            placeholder="या अहवालाबद्दल प्रश्न विचारा... (Ask about this report, press Enter)"
+          />
+        </div>
+        <div class="answer-box" id="answerBox" style="display: none"></div>
+
+        <div class="disclaimer-strip">
+          This summary is for understanding only and is not a medical diagnosis.
+          Always confirm details with your doctor.
+        </div>
       </div>
     </div>
 
-    <div class="preservation-note" id="checkBox" style="display:none;"></div>
-
-    <div class="ask-bar">
-      <input type="text" id="askInput" placeholder="या अहवालाबद्दल प्रश्न विचारा... (Ask about this report, press Enter)">
-    </div>
-    <div class="answer-box" id="answerBox" style="display:none;"></div>
-
-    <div class="disclaimer-strip">
-      This summary is for understanding only and is not a medical diagnosis. Always confirm details with your doctor.
-    </div>
-  </div>
-</div>
-<script src="js/main.js"></script>
-</body>
+    <script src="js/main.js"></script>
+    <script src="js/term_feature.js"></script>
+    <script>
+      initTermExplainFeature(["#englishSummary", "#marathiSummary"]);
+    </script>
+  </body>
 </html>
