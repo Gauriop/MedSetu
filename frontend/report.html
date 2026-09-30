@@ -59,11 +59,40 @@
         ></div>
 
         <div class="ask-bar">
-          <input
-            type="text"
-            id="askInput"
-            placeholder="या अहवालाबद्दल प्रश्न विचारा... (Ask about this report, press Enter)"
-          />
+          <select id="askLang" class="ask-lang">
+            <option value="en">English</option>
+            <option value="mr" selected>मराठी</option>
+          </select>
+          <input type="text" id="askInput" placeholder="" />
+          <button
+            type="button"
+            id="askMic"
+            class="ask-mic"
+            title="Speak your question"
+          >
+            🎤
+          </button>
+        </div>
+        <div class="answer-box" id="answerBox" style="display: none">
+          <div id="askTranscript" class="ask-transcript"></div>
+          <div id="answerText"></div>
+          <button
+            class="term-speak"
+            id="answerSpeak"
+            style="margin-top: 10px; display: none"
+          >
+            🔊
+          </button>
+        </div>
+        <div class="answer-box" id="answerBox" style="display: none">
+          <div id="answerText"></div>
+          <button
+            class="term-speak"
+            id="answerSpeak"
+            style="margin-top: 10px; display: none"
+          >
+            🔊 Listen
+          </button>
         </div>
         <div class="answer-box" id="answerBox" style="display: none"></div>
 
@@ -75,6 +104,7 @@
     </div>
 
     <script src="js/main.js"></script>
+    <script src="js/ask.js"></script>
     <script src="js/term_feature.js"></script>
     <script>
       initTermExplainFeature(["#englishSummary", "#marathiSummary"]);

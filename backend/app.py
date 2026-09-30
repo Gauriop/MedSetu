@@ -12,9 +12,7 @@ Then open frontend/index.html directly, or serve it with:
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import ingest, summarize, translate, extract, tts, ask, term
-
-
+from routes import ingest, summarize, translate, extract, tts, ask, term,voice
 app = FastAPI(title="MedSetu API")
 
 # Allow the frontend (running on a different port/file:// origin) to call this API.
@@ -33,6 +31,7 @@ app.include_router(extract.router, prefix="/api")
 app.include_router(tts.router, prefix="/api")
 app.include_router(ask.router, prefix="/api")
 app.include_router(term.router, prefix="/api")
+app.include_router(voice.router, prefix="/api")
 
 
 @app.get("/")
