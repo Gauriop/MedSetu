@@ -564,7 +564,7 @@ a {
   align-items: flex-start;
 }
 
-/* Ask a question bar */
+/* ---------- Ask a question bar ---------- */
 
 .ask-bar {
   margin-top: 20px;
@@ -574,7 +574,7 @@ a {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 8px 8px 8px 22px;
+  padding: 8px 8px 8px 12px;
 }
 
 .ask-bar input {
@@ -602,6 +602,93 @@ a {
   background: var(--teal);
 }
 
+.ask-lang {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-family: var(--font-mr), var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.ask-mic {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 999px;
+  width: 42px;
+  height: 42px;
+  font-size: 18px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ask-mic:hover {
+  border-color: var(--teal);
+}
+.ask-mic.recording {
+  background: #e5484d;
+  color: #fff;
+  border-color: #e5484d;
+  animation: askpulse 1s infinite;
+}
+@keyframes askpulse {
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.ask-transcript {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+}
+
+.ans-row {
+  margin-bottom: 10px;
+  line-height: 1.55;
+}
+
+.answer-box {
+  margin-top: 14px;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  font-family: var(--font-mr), var(--font-body);
+  font-size: 15px;
+  line-height: 1.65;
+  white-space: normal;
+}
+.answer-box .mr {
+  font-family: var(--font-mr);
+  font-size: 16px;
+}
+
+.answer-box .term-speak {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--teal-deep);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+.answer-box .term-speak:hover {
+  background: var(--teal);
+  color: #fff;
+  border-color: var(--teal);
+}
+
+/* ---------- Footer / disclaimer ---------- */
+
 .disclaimer-strip {
   margin-top: 40px;
   padding: 18px 22px;
@@ -619,6 +706,181 @@ footer.site-footer {
   color: var(--ink-faint);
   font-size: 13px;
 }
+
+/* ---------- Backend-connected states ---------- */
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--teal);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: -2px;
+  margin-right: 6px;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.error-box {
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: #fdf0ee;
+  border: 1px solid #f0c9c2;
+  color: #8a2c1f;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.preservation-note.warn {
+  background: #fdf3e6;
+  border-color: #f0d3ad;
+  color: #7a4a12;
+}
+
+/* ---------- Term explain feature ---------- */
+
+#termTrigger {
+  position: absolute;
+  z-index: 40;
+  display: none;
+  background: var(--teal-deep);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+#termTrigger:hover {
+  background: var(--teal);
+}
+
+#termCardOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 32, 31, 0.35);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 20px;
+}
+
+#termCard {
+  background: var(--surface);
+  border-radius: 20px;
+  max-width: 480px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 26px 28px;
+  position: relative;
+}
+
+#termCard .term-close {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--ink-faint);
+  cursor: pointer;
+  line-height: 1;
+}
+#termCard .term-close:hover {
+  color: var(--ink);
+}
+
+#termCard .term-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  margin: 0 0 4px;
+  padding-right: 24px;
+}
+
+#termCard .term-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 16px 0 14px;
+}
+
+#termCard .term-tab {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+#termCard .term-tab.active {
+  background: var(--teal);
+  color: #fff;
+  border-color: var(--teal);
+}
+
+#termCard .term-body {
+  font-size: 15.5px;
+  line-height: 1.65;
+  min-height: 48px;
+}
+#termCard .term-body.mr {
+  font-family: var(--font-mr);
+  font-size: 16.5px;
+}
+
+#termCard .term-context {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fbf7ee;
+  border: 1px solid #f0e6cf;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+
+#termCard .term-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+}
+
+#termCard .term-speak {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--teal-deep);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+#termCard .term-speak:hover {
+  background: var(--teal);
+  color: #fff;
+  border-color: var(--teal);
+}
+
+#termCard .term-disclaimer {
+  font-size: 11.5px;
+  color: var(--ink-faint);
+}
+
+/* ---------- Responsive (keep LAST, nothing after it) ---------- */
 
 @media (max-width: 860px) {
   .hero-grid {
@@ -649,244 +911,5 @@ footer.site-footer {
     );
     background-size: 100% 1px;
     background-position: center;
-  }
-
-  .ask-lang {
-    border: none;
-    background: var(--surface);
-    border-radius: 999px;
-    padding: 8px 12px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ink-soft);
-    border: 1px solid var(--border);
-    cursor: pointer;
-  }
-  .answer-box .mr {
-    font-family: var(--font-mr);
-    font-size: 16px;
-  }
-
-  /* ---- Backend-connected states ---- */
-  .spinner {
-    display: inline-block;
-    width: 14px;
-    height: 14px;
-    border: 2px solid var(--border);
-    border-top-color: var(--teal);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    vertical-align: -2px;
-    margin-right: 6px;
-  }
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  .error-box {
-    padding: 14px 18px;
-    border-radius: 14px;
-    background: #fdf0ee;
-    border: 1px solid #f0c9c2;
-    color: #8a2c1f;
-    font-size: 14px;
-    margin-bottom: 16px;
-  }
-  .preservation-note.warn {
-    background: #fdf3e6;
-    border-color: #f0d3ad;
-    color: #7a4a12;
-  }
-  .answer-box {
-    margin-top: 14px;
-    padding: 16px 20px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    font-family: var(--font-mr), var(--font-body);
-    font-size: 15px;
-    line-height: 1.65;
-    white-space: pre-wrap;
-  }
-
-  /* ---- Term explain feature ---- */
-
-  #termTrigger {
-    position: absolute;
-    z-index: 40;
-    display: none;
-    background: var(--teal-deep);
-    color: #fff;
-    border: none;
-    border-radius: 999px;
-    padding: 7px 14px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
-  }
-  #termTrigger:hover {
-    background: var(--teal);
-  }
-
-  #termCardOverlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(16, 32, 31, 0.35);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 50;
-    padding: 20px;
-  }
-
-  #termCard {
-    background: var(--surface);
-    border-radius: 20px;
-    max-width: 480px;
-    width: 100%;
-    max-height: 80vh;
-    overflow-y: auto;
-    padding: 26px 28px;
-    position: relative;
-  }
-
-  #termCard .term-close {
-    position: absolute;
-    top: 16px;
-    right: 18px;
-    background: none;
-    border: none;
-    font-size: 20px;
-    color: var(--ink-faint);
-    cursor: pointer;
-    line-height: 1;
-  }
-  #termCard .term-close:hover {
-    color: var(--ink);
-  }
-
-  #termCard .term-title {
-    font-family: var(--font-display);
-    font-size: 22px;
-    margin: 0 0 4px;
-    padding-right: 24px;
-  }
-
-  #termCard .term-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin: 16px 0 14px;
-  }
-
-  #termCard .term-tab {
-    font-size: 12.5px;
-    font-weight: 600;
-    padding: 6px 12px;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--ink-soft);
-    cursor: pointer;
-  }
-  #termCard .term-tab.active {
-    background: var(--teal);
-    color: #fff;
-    border-color: var(--teal);
-  }
-
-  #termCard .term-body {
-    font-size: 15.5px;
-    line-height: 1.65;
-    min-height: 48px;
-  }
-  #termCard .term-body.mr {
-    font-family: var(--font-mr);
-    font-size: 16.5px;
-  }
-
-  #termCard .term-context {
-    margin-top: 16px;
-    padding: 12px 14px;
-    border-radius: 12px;
-    background: #fbf7ee;
-    border: 1px solid #f0e6cf;
-    font-size: 13.5px;
-    color: var(--ink-soft);
-  }
-
-  #termCard .term-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 18px;
-  }
-
-  #termCard .term-speak {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--teal-deep);
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 7px 14px;
-    cursor: pointer;
-  }
-  #termCard .term-speak:hover {
-    background: var(--teal);
-    color: #fff;
-    border-color: var(--teal);
-  }
-
-  #termCard .term-disclaimer {
-    font-size: 11.5px;
-    color: var(--ink-faint);
-  }
-  .ask-lang {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 8px 12px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ink-soft);
-    cursor: pointer;
-  }
-  .ask-mic {
-    border: 1px solid var(--border);
-    background: var(--surface);
-    border-radius: 999px;
-    width: 40px;
-    height: 40px;
-    font-size: 18px;
-    cursor: pointer;
-  }
-  .ask-mic.recording {
-    background: #e5484d;
-    color: #fff;
-    animation: askpulse 1s infinite;
-  }
-  @keyframes askpulse {
-    50% {
-      opacity: 0.6;
-    }
-  }
-  .ask-transcript {
-    font-size: 13px;
-    color: var(--ink-soft);
-    margin-bottom: 8px;
-  }
-  .ans-row {
-    margin-bottom: 10px;
-    line-height: 1.55;
-  }
-  .answer-box .mr {
-    font-family: var(--font-mr);
-    font-size: 16px;
   }
 }

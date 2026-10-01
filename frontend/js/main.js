@@ -230,7 +230,7 @@ if ($("englishSummary")) {
       const res = await fetch(`${API_BASE}/tts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, language: "mr" }),
       });
       if (!res.ok) throw new Error("tts failed");
       currentAudio = new Audio(URL.createObjectURL(await res.blob()));
@@ -244,51 +244,4 @@ if ($("englishSummary")) {
       btn.disabled = false;
     }
   });
-  $("askInput").addEventListener("keydown", async (e) => {
-    const q = e.target.value.trim();
-    if (e.key !== "Enter" || !q) return;
-    const lang = $("askLang").value;
-    const box = $("answerBox");
-    const textEl = $("answerText");
-    const speakBtn = $("answerSpeak");
-    box.style.display = "block";
-    speakBtn.style.display = "none";
-    textEl.innerHTML = '<span class="spinner"></span> Looking in your report…';
-
-    try {
-      const data = await postJSON("/ask", {
-        report_text: sessionStorage.getItem("reportText"),
-        question: q,
-        language: lang,
-      });
-      textEl.textContent = data.answer;
-      textEl.classList.toggle("mr", lang === "mr");
-      speakBtn.style.display = "inline-flex";
-      speakBtn.onclick = () => speakAnswer(data.answer, lang);
-    } catch (err) {
-      textEl.textContent = "Could not get an answer. Is the backend running?";
-    }
-  });
-
-  async function speakAnswer(text, lang) {
-    if (lang === "mr") {
-      try {
-        const res = await fetch(`${API_BASE}/tts`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text }),
-        });
-        if (!res.ok) throw new Error("tts failed");
-        new Audio(URL.createObjectURL(await res.blob())).play();
-      } catch (err) {
-        alert("Could not generate Marathi audio.");
-      }
-    } else {
-      if (!("speechSynthesis" in window)) return;
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = "en-US";
-      speechSynthesis.cancel();
-      speechSynthesis.speak(u);
-    }
-  }
 }

@@ -16,7 +16,6 @@ function initTermExplainFeature(selectors) {
       <div class="term-tabs">
         <button class="term-tab active" data-field="simple_english">Simple English</button>
         <button class="term-tab" data-field="marathi_meaning">Marathi meaning</button>
-        <button class="term-tab" data-field="simple_marathi_explanation">Marathi, simply</button>
       </div>
       <div class="term-body" id="termBody">Loading…</div>
       <div class="term-context" id="termContext" style="display:none;"></div>
@@ -85,7 +84,12 @@ function initTermExplainFeature(selectors) {
       const res = await fetch(`${API_BASE}/term-explain`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ term, context }),
+        body: JSON.stringify({
+          term,
+          context,
+          report_text: sessionStorage.getItem("reportText") || "",
+          language: "mr",
+        }),
       });
       if (!res.ok) throw new Error("request failed");
       lastResult = await res.json();
@@ -106,10 +110,7 @@ function initTermExplainFeature(selectors) {
     if (!lastResult) return;
     const body = $("termBody");
     body.textContent = lastResult[field] || "(no explanation available)";
-    body.classList.toggle(
-      "mr",
-      field === "marathi_meaning" || field === "simple_marathi_explanation",
-    );
+    body.classList.toggle("mr", field === "marathi_meaning");
 
     const ctxBox = $("termContext");
     if (lastResult.context_note && lastResult.context_note.trim()) {
@@ -139,8 +140,7 @@ function initTermExplainFeature(selectors) {
 
   $("termSpeak").addEventListener("click", async () => {
     if (!lastResult) return;
-    const text =
-      lastResult.simple_marathi_explanation || lastResult.marathi_meaning;
+    const text = lastResult.marathi_meaning;
     if (!text) return;
     const btn = $("termSpeak");
     btn.disabled = true;
@@ -148,7 +148,7 @@ function initTermExplainFeature(selectors) {
       const res = await fetch(`${API_BASE}/tts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, language: "mr" }),
       });
       if (!res.ok) throw new Error("tts failed");
       new Audio(URL.createObjectURL(await res.blob())).play();
