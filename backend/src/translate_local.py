@@ -46,6 +46,7 @@ def _load(kind: str):
             import torch  # noqa: F401
             from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
             name = config.TRANSLATE_EN_INDIC if kind == "en-indic" else config.TRANSLATE_INDIC_EN
+            print(f"[translate] Loading IndicTrans2 {kind} model (first call only)...")
             tok = AutoTokenizer.from_pretrained(name, trust_remote_code=True)
             model = AutoModelForSeq2SeqLM.from_pretrained(name, trust_remote_code=True)
             model.to(config.get_device()).eval()
