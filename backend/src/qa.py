@@ -1,7 +1,16 @@
-"""Shared report-grounded Q&A. Text mode and voice mode both call answer_question().
+"""Shared report-grounded Q&A, with a general-knowledge fallback.
 
-Pipeline: question -> (IndicTrans2 to English if needed) -> RAG retrieval (FAISS)
--> LLM (English, grounded) -> (IndicTrans2 to Marathi if needed) -> structured answer.
+Three answer sources, decided by the LLM itself:
+  - "report":      retrieved report sections answer the question
+  - "general":     question is general medical knowledge, not specific to
+                    this patient's own data - answered from the model's
+                    general knowledge, clearly labelled as such
+  - "unavailable": question asks about this patient's specific data, but
+                    it isn't in the report - never guessed
+
+Text mode and voice mode both call answer_question(). Term explanation
+(explain_term) is also used both standalone (text selection) and inline
+inside a Q&A answer (clicking a term chip under the answer).
 """
 import re
 from typing import Dict, List, Optional
@@ -14,9 +23,17 @@ NOT_AVAILABLE = {
     "en": "This information is not available in your uploaded report.",
     "mr": "ही माहिती तुमच्या अपलोड केलेल्या अहवालात उपलब्ध नाही.",
 }
+GENERAL_NOTE = {
+    "en": "This is general medical information, not based on your specific report. Please consult your doctor for advice about your own case.",
+    "mr": "ही सर्वसाधारण वैद्यकीय माहिती आहे, तुमच्या विशिष्ट अहवालावर आधारित नाही. तुमच्या स्वतःच्या स्थितीबद्दल सल्ल्यासाठी कृपया तुमच्या डॉक्टरांचा सल्ला घ्या."
+}
 LABELS = {
     "en": ["Answer", "What your report says", "What it means", "Important"],
     "mr": ["उत्तर", "तुमच्या अहवालात असे म्हटले आहे", "याचा अर्थ", "महत्त्वाचे"],
+}
+SOURCE_LABELS = {
+    "en": {"report": "From your report", "general": "General information (not from your report)", "unavailable": "Not in your report"},
+    "mr": {"report": "तुमच्या अहवालातून", "general": "सर्वसाधारण माहिती (तुमच्या अहवालातून नाही)", "unavailable": "तुमच्या अहवालात नाही"},
 }
 NONE_TEXT = {"en": "None", "mr": "काही नाही"}
 UNCLEAR = {
@@ -25,24 +42,29 @@ UNCLEAR = {
 }
 KEYS = ["answer", "report_says", "means", "important"]
 NONE_WORDS = {"none", "not applicable", "n/a", "nil", "-", "no limitations"}
+VALID_SOURCES = {"report", "general", "unavailable"}
 
-SYSTEM_PROMPT = """You are the MedSetu medical report assistant. You EXPLAIN a patient's report; you never diagnose.
+SYSTEM_PROMPT = """You are the MedSetu medical report assistant. You EXPLAIN; you never diagnose.
 
-Answer ONLY from the retrieved report sections given by the user. Never answer a question about the report from general knowledge.
+You are given retrieved sections from the patient's own uploaded report, and a question. Decide which of these three applies, and set SOURCE accordingly:
 
-Rules:
-- If the sections do not contain or support the answer, the ANSWER must be exactly: This information is not available in your uploaded report.
+- SOURCE: report - the retrieved sections contain information that answers the question about this patient.
+- SOURCE: general - the question is a general medical knowledge question (e.g. "what is hypertension", "what causes kidney stones") that does NOT require this patient's own specific data, and the retrieved sections don't already answer it. You MAY answer this from your general medical knowledge, but you must clearly mark it as general information, not something read from the report, and you must still avoid diagnosing this specific patient or implying the general information applies to their case.
+- SOURCE: unavailable - the question asks about this patient's OWN specific data or findings (e.g. "what was my blood pressure", "did my report mention X"), and the retrieved sections do not contain it. Do NOT guess or invent patient data. ANSWER must be exactly: This information is not available in your uploaded report.
+
+Rules that always apply, regardless of SOURCE:
 - Preserve exactly: measurements, units, numbers, dates, body parts, left/right side, severity, medical terminology, and both positive and negative findings. Never turn "no evidence of X", "absent", "without", "negative for" into a positive finding, or the reverse.
-- Do NOT diagnose, predict a disease from an isolated finding, recommend medication or treatment, or turn an uncertain finding into a definite conclusion. Do not invent medical information.
+- Do NOT diagnose, predict a disease from an isolated finding, recommend medication or treatment, or turn an uncertain finding into a definite conclusion. Do not invent medical information about this specific patient.
 - Clearly separate: what the report states, what a medical term generally means, and what cannot be determined from the report.
-- Explain terms in the context where they appear in the report, in simple patient-friendly English.
+- Explain terms in simple, patient-friendly language.
 
 Reply in EXACTLY this plain-text format (no markdown):
+SOURCE: report | general | unavailable
 ANSWER: <direct answer to the question>
-REPORT_SAYS: <the relevant statement from the report, wording preserved>
+REPORT_SAYS: <the relevant statement from the report, wording preserved, or "Not mentioned in your report" if SOURCE is general>
 MEANS: <simple patient-friendly explanation>
-IMPORTANT: <uncertainty or limitation, or None>
-TERMS: <medical terms used in your answer, exactly as written in the report, separated by semicolons, or None>"""
+IMPORTANT: <uncertainty, limitation, or the general-information disclaimer if SOURCE is general, or None>
+TERMS: <medical terms used in your answer, separated by semicolons, or None>"""
 
 TERM_PROMPT = """You explain one medical term to a patient. You never diagnose.
 Reply in EXACTLY this plain-text format (no markdown):
@@ -51,7 +73,7 @@ CONTEXT: <what the term refers to in THIS report, using ONLY the report sections
 
 # ---------------- parsing + safety checks (pure python) ----------------
 _FIELD_RE = re.compile(
-    r"^\s*\**\s*(ANSWER|REPORT_SAYS|MEANS|IMPORTANT|TERMS|SIMPLE_MEANING|CONTEXT)\s*\**\s*:\s*",
+    r"^\s*\**\s*(SOURCE|ANSWER|REPORT_SAYS|MEANS|IMPORTANT|TERMS|SIMPLE_MEANING|CONTEXT)\s*\**\s*:\s*",
     re.M,
 )
 
@@ -99,16 +121,29 @@ def _is_not_available(text: str) -> bool:
     return NOT_AVAILABLE["en"].lower().rstrip(".") in text.lower()
 
 
-def _build(lang: str, vals: Dict[str, str]) -> Dict:
+def _build(lang: str, vals: Dict[str, str], source: str, terms: List[str]) -> Dict:
     sections = [{"key": k, "label": LABELS[lang][i], "value": vals[k]} for i, k in enumerate(KEYS)]
-    return {"sections": sections, "text": "\n\n".join(f"{s['label']}: {s['value']}" for s in sections)}
+    return {
+        "sections": sections,
+        "text": "\n\n".join(f"{s['label']}: {s['value']}" for s in sections),
+        "source": source,
+        "source_label": SOURCE_LABELS[lang].get(source, source),
+        "terms": terms,
+    }
 
 
 def _not_available_response(lang: str) -> Dict:
     msg = NOT_AVAILABLE[lang]
-    return {"sections": [{"key": "answer", "label": LABELS[lang][0], "value": msg}], "text": msg}
+    return {
+        "sections": [{"key": "answer", "label": LABELS[lang][0], "value": msg}],
+        "text": msg,
+        "source": "unavailable",
+        "source_label": SOURCE_LABELS[lang]["unavailable"],
+        "terms": [],
+    }
 
 
+# ---------------- main pipelines ----------------
 def answer_question(report_text: str, question: str, answer_lang: str = "en",
                     question_lang: Optional[str] = None) -> Dict:
     from translate_local import translate
@@ -118,26 +153,29 @@ def answer_question(report_text: str, question: str, answer_lang: str = "en",
     hits = retrieve(report_text, q_en)
     base = {"status": "ok", "language": answer_lang, "question": question, "question_en": q_en,
             "sources": [h["text"] for h in hits]}
-    if not hits:
-        return {**base, **_not_available_response(answer_lang)}
 
-    context = "\n---\n".join(h["text"] for h in hits)
+    context = "\n---\n".join(h["text"] for h in hits) if hits else "(no relevant sections found in the report)"
     raw = generate(SYSTEM_PROMPT, f"Retrieved report sections:\n{context}\n\nQuestion: {q_en}")
     f = parse_fields(raw)
-    if _is_not_available(f.get("ANSWER", raw)) and len(f.get("ANSWER", raw)) < 90:
+
+    source = f.get("SOURCE", "").strip().lower()
+    if source not in VALID_SOURCES:
+        source = "unavailable" if _is_not_available(f.get("ANSWER", raw)) else "report"
+
+    if source == "unavailable":
         return {**base, **_not_available_response(answer_lang)}
 
     vals = {
         "answer": f.get("ANSWER", ""),
-        "report_says": f.get("REPORT_SAYS", "") or NOT_AVAILABLE["en"],
+        "report_says": f.get("REPORT_SAYS", "") or ("Not mentioned in your report" if source == "general" else NOT_AVAILABLE["en"]),
         "means": f.get("MEANS", "") or NOT_AVAILABLE["en"],
-        "important": f.get("IMPORTANT", "") or NONE_TEXT["en"],
+        "important": f.get("IMPORTANT", "") or (GENERAL_NOTE["en"] if source == "general" else NONE_TEXT["en"]),
     }
     terms = [t.strip() for t in f.get("TERMS", "").split(";")
              if t.strip() and t.strip().lower() not in NONE_WORDS]
 
     if answer_lang == "en":
-        return {**base, **_build("en", vals)}
+        return {**base, **_build("en", vals, source, terms)}
 
     mr = {}
     for k, v in vals.items():
@@ -145,11 +183,11 @@ def answer_question(report_text: str, question: str, answer_lang: str = "en",
             mr[k] = NONE_TEXT["mr"]
         elif v.strip() == NOT_AVAILABLE["en"]:
             mr[k] = NOT_AVAILABLE["mr"]
+        elif v.strip() == GENERAL_NOTE["en"]:
+            mr[k] = GENERAL_NOTE["mr"]
         else:
             mr[k] = repair(v, translate(v, "en", "mr"))
-    if terms:
-        mr["means"] += f" (वैद्यकीय संज्ञा / Medical terms: {'; '.join(terms)})"
-    return {**base, **_build("mr", mr)}
+    return {**base, **_build("mr", mr, source, terms)}
 
 
 def explain_term(report_text: str, term: str, lang: str = "en") -> Dict:

@@ -1,4 +1,6 @@
-/* MedSetu Q&A: text + voice, English + Marathi. Load AFTER main.js. */
+/* MedSetu Q&A: text + voice, English + Marathi, general-knowledge fallback,
+   and clickable term chips under each answer that call /api/term-explain
+   inline. Load AFTER main.js. */
 (() => {
   const API =
     typeof API_BASE !== "undefined" ? API_BASE : "http://localhost:8000/api";
@@ -6,7 +8,7 @@
 
   const T = {
     en: {
-      ph: "Ask about this report… (press Enter, or tap 🎤 to speak)",
+      ph: "Ask about this report, or ask anything… (press Enter, or tap 🎤 to speak)",
       wait: "Looking in your report…",
       hear: "Listening to your question…",
       listen: "🔊 Listen",
@@ -15,9 +17,11 @@
       err: "Could not get an answer. Is the backend running?",
       micDenied: "Microphone access is needed for voice questions.",
       noReport: "No report loaded. Please upload a report first.",
+      termsLabel: "Tap a term to understand it:",
+      termLoading: "Looking that up…",
     },
     mr: {
-      ph: "या अहवालाबद्दल प्रश्न विचारा… (Enter दाबा, किंवा 🎤 वर बोला)",
+      ph: "या अहवालाबद्दल किंवा कोणताही प्रश्न विचारा… (Enter दाबा, किंवा 🎤 वर बोला)",
       wait: "तुमच्या अहवालात शोधत आहे…",
       hear: "तुमचा प्रश्न ऐकत आहे…",
       listen: "🔊 ऐका",
@@ -27,6 +31,8 @@
       micDenied:
         "आवाजाने प्रश्न विचारण्यासाठी मायक्रोफोनची परवानगी आवश्यक आहे.",
       noReport: "अहवाल उपलब्ध नाही. कृपया आधी अहवाल अपलोड करा.",
+      termsLabel: "समजून घेण्यासाठी संज्ञेवर टॅप करा:",
+      termLoading: "शोधत आहे…",
     },
   };
   const lang = () => $("askLang").value;
@@ -41,31 +47,109 @@
     $("answerSpeak").textContent = ui().listen;
   }
 
+  function sourceClass(source) {
+    return source === "report"
+      ? "src-report"
+      : source === "general"
+        ? "src-general"
+        : "src-unavailable";
+  }
+
   function render(data, l) {
     const box = $("answerBox"),
       out = $("answerText"),
       tr = $("askTranscript");
     box.style.display = "block";
-    out.textContent = "";
+    out.innerHTML = "";
     out.classList.toggle("mr", l === "mr");
     tr.textContent =
       data.transcript || data.question
         ? ui().asked + (data.transcript || data.question)
         : "";
+
     if (data.status === "unclear") {
       out.textContent = data.message;
-    } else {
-      for (const s of data.sections) {
-        const row = document.createElement("div");
-        row.className = "ans-row";
-        const label = document.createElement("strong");
-        label.textContent = s.label + ": ";
-        row.append(label, document.createTextNode(s.value));
-        out.appendChild(row);
-      }
+      $("answerSpeak").style.display = "none";
+      return;
     }
+
+    if (data.source_label) {
+      const badge = document.createElement("div");
+      badge.className = `source-badge ${sourceClass(data.source)}`;
+      badge.textContent = data.source_label;
+      out.appendChild(badge);
+    }
+
+    for (const s of data.sections) {
+      const row = document.createElement("div");
+      row.className = "ans-row";
+      const label = document.createElement("strong");
+      label.textContent = s.label + ": ";
+      row.append(label, document.createTextNode(s.value));
+      out.appendChild(row);
+    }
+
+    if (data.terms && data.terms.length) {
+      const wrap = document.createElement("div");
+      wrap.className = "term-chip-wrap";
+      const hint = document.createElement("div");
+      hint.className = "term-chip-hint";
+      hint.textContent = ui().termsLabel;
+      wrap.appendChild(hint);
+      data.terms.forEach((term) => wrap.appendChild(makeTermChip(term, l)));
+      out.appendChild(wrap);
+    }
+
     lastSpoken = { text: data.text, lang: l };
     $("answerSpeak").style.display = "inline-flex";
+  }
+
+  function makeTermChip(term, l) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "term-chip";
+    chip.textContent = term;
+    const panel = document.createElement("div");
+    panel.className = "term-chip-panel";
+    panel.style.display = "none";
+    let loaded = false;
+
+    chip.addEventListener("click", async () => {
+      const open = panel.style.display !== "none";
+      panel.style.display = open ? "none" : "block";
+      if (open || loaded) return;
+      panel.innerHTML = `<span class="spinner"></span> ${ui().termLoading}`;
+      try {
+        const res = await fetch(`${API}/term-explain`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            report_text: reportText(),
+            term,
+            language: l,
+          }),
+        });
+        const data = await res.json();
+        panel.innerHTML = "";
+        panel.classList.toggle("mr", l === "mr");
+        for (const s of data.sections) {
+          const row = document.createElement("div");
+          row.className = "ans-row";
+          const label = document.createElement("strong");
+          label.textContent = s.label + ": ";
+          row.append(label, document.createTextNode(s.value));
+          panel.appendChild(row);
+        }
+        loaded = true;
+      } catch (err) {
+        panel.textContent = ui().err;
+      }
+    });
+
+    const holder = document.createElement("span");
+    holder.className = "term-chip-holder";
+    holder.append(chip, panel);
+    return holder;
   }
 
   function stopAudio() {
